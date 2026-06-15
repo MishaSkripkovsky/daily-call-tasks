@@ -1,0 +1,6 @@
+# Local scratch exports from the CLI fallback (may contain meeting-notes text) — never commit
+.tmp/
+**/.tmp/
+
+# OS / editor cruft
+.DS_Store

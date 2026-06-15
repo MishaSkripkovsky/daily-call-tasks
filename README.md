@@ -17,10 +17,11 @@ Roadmap (optional, later):
 From inside this repo (so the project skill is picked up), pre-approving the read-only tools it needs (a bare `claude -p` would abort at the first tool-approval prompt; **do not** use `--bare` — it disables skill discovery):
 
 ```bash
-cd daily-call-tasks
+# run from the repo root (so the project skill under ./.claude/skills is discovered):
 claude -p "/daily-call-tasks --since=yesterday --dry-run" \
-  --allowedTools "Read,Bash(npx @googleworkspace/cli *),mcp__claude_ai_Google_Calendar__list_events,mcp__claude_ai_Google_Drive__read_file_content,mcp__claude_ai_Google_Drive__search_files"
+  --allowedTools "Read,mcp__claude_ai_Google_Calendar__list_events,mcp__claude_ai_Google_Drive__read_file_content,mcp__claude_ai_Google_Drive__search_files,Bash(npx @googleworkspace/cli *)"
 ```
+> Reads Docs via the Drive connector's `read_file_content` (no file written). The `npx` CLI is only a local fallback and writes a scratch file under `.tmp/` (gitignored).
 
 Prerequisite: your Google Calendar + Google Drive must be reachable — either a connected Google Calendar/Drive MCP connector, or the `npx @googleworkspace/cli` authenticated locally. The skill auto-detects and falls back. To pin transcript-reading sub-agents to Sonnet locally: `export CLAUDE_CODE_SUBAGENT_MODEL=claude-sonnet-4-6`.
 

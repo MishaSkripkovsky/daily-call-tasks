@@ -23,8 +23,8 @@ Keep event IFF:
 `self == true` is mandatory (else you mis-attribute other people's calls). `needsAction` (un-answered invite) and `declined` do NOT count as attended.
 
 Exclude:
-- `eventType` ∈ {`workingLocation`, `focusTime`, `outOfOffice`}.
-- Re-narrow to the true `[start,end]` after the ±1-day boundary padding.
+- non-meeting `eventType` — match **case-insensitively**: the connector returns CAPS (`WORKING_LOCATION`, `FOCUS_TIME`, `OUT_OF_OFFICE`), the CLI returns camelCase (`workingLocation`…).
+- Re-narrow to the true `[start,end]` (in the resolved user TZ) after the ±1-day boundary padding.
 
 ## Meeting Resources regexes (Step 3)
 Description is HTML — match links, do not parse as a tree. Strip query strings before use.
@@ -32,7 +32,7 @@ Description is HTML — match links, do not parse as a tree. Strip query strings
 - Drive file id: `https://drive\.google\.com/file/d/([A-Za-z0-9_-]+)`
 - Drive folder:  `https://drive\.google\.com/drive/folders/([A-Za-z0-9_-]+)`
 
-**Capture each link together with its adjacent anchor text and select by that label** — bare ids alone cannot tell the Meeting Notes doc from the transcript/video doc. The notes-bot block typically labels links `Transcription` (sometimes `This Call` / `Project Calls`), `Meeting Notes`, `Video`, `Parent Folder`. Route only the **`Meeting Notes`**-labeled doc to extraction; pass a `Transcription`-labeled doc as the optional transcript; **skip `Video`** (binary; not transcribed here).
+**Capture each link together with its adjacent anchor text and select by that label** — bare ids alone cannot tell the Meeting Notes doc from the transcript/video doc. The notes-bot block typically labels links `Transcription` (sometimes `This Call` / `Project Calls`), `Meeting Notes`, `Video`, `Parent Folder`. Route only the **`Meeting Notes`**-labeled doc to extraction; pass a `Transcription`-labeled doc as the optional transcript; **skip `Video`** (binary; not transcribed here). **If the `Meeting Notes` doc is inaccessible (403/not-found) or absent, PROMOTE the `Transcription` doc (or a connected Sembly transcript) to be that call's extraction source** — notes-bot docs are often owned by the bot/team and 403 for the running account.
 
 ## Meeting Notes sections
 Typical Markdown/Doc structure: `Topic:`, `Date:`, `Short Summary`, `Key Discussion Points`, `Action Points` (often per attendee), `Meeting Resources`. For action-item extraction the `Action Points` section keyed to `{user.name}` is the highest-signal source; quote it verbatim and cite the Doc URL + that section heading.
@@ -40,7 +40,7 @@ Typical Markdown/Doc structure: `Topic:`, `Date:`, `Short Summary`, `Key Discuss
 ## Provider fallback (Step 0)
 Per source, try the present provider first, fall back to the other; only fail a source if every provider fails.
 - Calendar: `mcp__*Google_Calendar*__list_events`  ⇄  `npx @googleworkspace/cli calendar events list`
-- Docs:     Drive MCP/connector read              ⇄  `npx @googleworkspace/cli drive files export --params '{"fileId":"<id>","mimeType":"text/plain"}' --output ./.tmp/daily-call-tasks/<id>.txt` then `Read`
+- Docs:     **PRIMARY** the Drive connector `read_file_content(fileId)` — returns the Doc text directly (no export, no `mimeType`); the ONLY working path in a cloud routine.  ⇄  LOCAL-ONLY fallback `npx @googleworkspace/cli drive files export --params '{"fileId":"<id>","mimeType":"text/plain"}' --output ./.tmp/daily-call-tasks/<id>.txt` then `Read` (this writes a local scratch file — gitignored; the connector path writes nothing).
 - Transcripts (optional): `mcp__sembly-ai__*` or any connected notetaker; skip silently if none.
 
 In a **cloud routine** the claude.ai connectors are the available, pre-authed path (the local `npx` CLI is typically NOT authed there). Locally the CLI may be the faster path. Detect, don't assume.
