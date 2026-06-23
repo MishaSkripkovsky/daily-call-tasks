@@ -6,12 +6,47 @@ It is **read-only** and **unattended-safe**: it never asks questions, never inve
 
 > ClickUp 86ca8brqx · adapted from the read-only [`find-call`](https://github.com/SashaMarchuk/claude-plugins) extraction logic.
 
+## Skills in this repo
+This repo ships **three** complementary skills under `.claude/skills/` (they share the extraction logic + the `~/.claude/shared/identity.json` contract):
+
+| Skill | Posture | What it does |
+|---|---|---|
+| `daily-call-tasks` | read-only, unattended | the cited morning digest (below) |
+| `daily-call-tasks-commit` | interactive, write | review/edit the digest → create the chosen items as ClickUp tasks (self only) |
+| `morning-brief` | interactive | Geekbot-style standup prep — what you did / on your plate / blockers / open questions → auto-post to Geekbot (see [Morning Brief](#morning-brief-standup-prep)) |
+
 ## How it's delivered (decided)
 The skill **prints** the digest, and that printed digest **is the delivery**: it runs as a daily **cloud routine** (`/schedule`) whose result is a session in your Claude account — you read it each morning in the Claude app (web + mobile). No Slack, no secrets, no extra connector. You then create whatever tickets you want yourself.
 
-Roadmap (optional, later):
-- Slack delivery (first-party Slack connector) if a push-to-channel surface is wanted.
-- Optional confirm → ClickUp ticket creation.
+## Send to ClickUp (v2 — interactive)
+A separate, interactive companion skill **`daily-call-tasks-commit`** turns the digest into ClickUp tasks. The morning digest stays **read-only**; this write step runs only in a Claude session (it refuses to run unattended). Flow:
+1. Review the grouped list in chat; edit by exception — `drop B1`, `edit A1: …`, `desc A1: …`, `list A1: <list>`, `go`, `cancel`.
+2. Pick the destination ClickUp list **in the moment** (per item or a batch default).
+3. On `go`, each item is CREATEd — or, if a similar task already exists in that list, you're shown a before→after diff and choose `update` / `create new` / `skip`.
+
+Safeguards: writes nothing until you type `go` (`--dry-run` shows the plan and writes nothing); only acts on action items the source attributes to **you** (others → `UNATTRIBUTED`, never auto-committed); updates change **name/description only**, never closed/others' tasks; re-runs don't duplicate (hidden idempotency marker); dismissed items don't re-surface.
+
+```bash
+# from the repo root, in a Claude session:
+/daily-call-tasks-commit --since=yesterday --dry-run    # preview the create/update plan
+/daily-call-tasks-commit --since=yesterday              # review/edit → go → writes
+```
+
+Roadmap (optional, later): Slack delivery; PM-oversight of other people's tasks (deliberately a non-goal for now — self only).
+
+## Morning Brief (standup prep)
+`morning-brief` is an **interactive** sibling skill that prepares your daily standup from the same calls + your own ClickUp tasks, and (on confirmation) posts it to Geekbot. ClickUp 86cacn12x.
+
+One command assembles five sections: **Done** (attended meetings + ClickUp status changes — `In Progress` = worked on, `Review`/`Done` = sent for review *and to whom*, resolved from the task's assigned comments), **On your plate** (open `In Progress`/`To-Do` tasks + not-yet-ticketed action items pulled inline from yesterday's calls), **Blockers**, **Open questions** (asked, then @-mentioned correctly via a `team.md` roster), and optionally **Emails** (if a Gmail connector is present). It is read-only against ClickUp/Calendar/Drive — the only writes are the self-onboarded identity file and the **confirmed** Geekbot post; it fails closed on any unresolved `@mention`.
+
+```bash
+/morning-brief --onboard     # one-time: self-contained identity wizard (writes ~/.claude/shared/identity.json)
+/morning-brief --status      # show which dependencies are connected / degraded
+/morning-brief --no-post     # compose + print the brief, never post to Geekbot
+/morning-brief               # full interactive run → confirm → post
+```
+
+Optional dependencies degrade gracefully: a **Geekbot** API key (`GEEKBOT_API_KEY`) enables auto-post; the **Gmail** connector enables the Emails section; a **team.md** roster enables `<@SlackID>` mentions. Running `--onboard` once also satisfies `daily-call-tasks-commit`'s identity requirement. See `.claude/skills/morning-brief/references/` for the snapshot-diff, dedup, and Geekbot details.
 
 ## Try it locally (dry-run)
 From inside this repo (so the project skill is picked up), pre-approving the read-only tools it needs (a bare `claude -p` would abort at the first tool-approval prompt; **do not** use `--bare` — it disables skill discovery):
@@ -44,12 +79,12 @@ What to verify in the output:
 
 ## Layout
 ```
-.claude/skills/daily-call-tasks/
-  SKILL.md                 # the skill (extraction + digest)
-  references/extraction.md  # regexes, attended predicate, notes parsing
+.claude/skills/
+  daily-call-tasks/          SKILL.md  references/extraction.md   # read-only digest
+  daily-call-tasks-commit/   SKILL.md  references/commit-rules.md # interactive → ClickUp
+  morning-brief/             SKILL.md  references/{onboarding,sections}.md  # standup prep + Geekbot
 ```
 
-## Guarantees
-- Read-only — zero writes to any service.
-- Sonnet sub-agents for reading notes/transcripts (citation fidelity); never invents action items.
-- Always emits a result (even "no calls / no notes found"), so a silent failure is distinguishable from a quiet day.
+## Guarantees (per skill)
+- `daily-call-tasks` (the digest) is **read-only** — zero writes to any service; Sonnet sub-agents (citation fidelity); never invents an action item; always emits a result (even "no calls / no notes found"), so a silent failure is distinguishable from a quiet day.
+- The two writer siblings act only on explicit confirmation: `daily-call-tasks-commit` writes to ClickUp (self only, never closed/others' tasks, idempotent re-runs); `morning-brief`'s only writes are the self-onboarded identity file and the **confirmed** Geekbot post (fails closed on unresolved mentions).
