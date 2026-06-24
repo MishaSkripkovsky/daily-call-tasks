@@ -71,10 +71,16 @@ with open(LOCK, "w") as lk:
         try:
             with open(PATH) as f: base = json.load(f)
         except Exception:
-            os.replace(PATH, PATH + ".corrupt-%d" % int(time.time()))  # quarantine + reskeleton
+            os.replace(PATH, PATH + ".corrupt-%d" % int(time.time()))  # unparseable → quarantine + reskeleton
             base = {}
-    # schemaVersion: refuse to downgrade a newer file (read-only fallback)
-    if isinstance(base.get("schemaVersion"), int) and base["schemaVersion"] > 2:
+    # Quarantine a corrupt-TYPED existing file BEFORE writing — match the cross-plugin gate:
+    # an existing non-empty file whose schemaVersion is missing, or not a BARE int (string "2", float, null, bool)
+    # must be moved aside, NEVER silently coerced (silent coercion is the downgrade vector /clickup + /gevent close).
+    sv = base.get("schemaVersion")
+    if base and ("schemaVersion" not in base or isinstance(sv, bool) or not isinstance(sv, int)):
+        os.replace(PATH, PATH + ".corrupt-%d" % int(time.time())); base = {}; sv = None
+    # refuse to downgrade a file a NEWER plugin owns (read-only fallback)
+    elif isinstance(sv, int) and sv > 2:
         raise SystemExit("identity.json schemaVersion > 2 — a newer plugin owns it; not writing.")
     base.setdefault("schemaVersionHistory", [])
     if base.get("schemaVersion") != 2:

@@ -37,6 +37,14 @@ Description is HTML — match links, do not parse as a tree. Strip query strings
 ## Meeting Notes sections
 Typical Markdown/Doc structure: `Topic:`, `Date:`, `Short Summary`, `Key Discussion Points`, `Action Points` (often per attendee), `Meeting Resources`. For action-item extraction the `Action Points` section keyed to `{user.name}` is the highest-signal source; quote it verbatim and cite the Doc URL + that section heading.
 
+## Per-item fields (priority / deadline / description)
+For EACH extracted action item, ALSO capture these **only if voiced** in the notes/transcript — leave a field blank otherwise, NEVER invent:
+- **priority** → a ClickUp value `urgent` / `high` / `normal` / `low`. Set only when urgency was actually conveyed ("ASAP/today/critical" → urgent/high; "when you can/low-pri/nice-to-have" → low). Blank if not voiced.
+- **deadline** → `YYYY-MM-DD`, only if a due date/timeframe was stated ("by Friday", "end of month", "before the 30th"). Resolve relative phrases against the **call date** (passed to the sub-agent as `<CALL_DATE>`), in the user TZ. Blank if none stated.
+- **description** → a short (≤1–2 line) context summary from the surrounding discussion, enough that the task stands alone — NOT a long history/Acceptance-Criteria dump. Cite the source line. Blank if there's no context beyond the action title.
+
+These surface inline in the digest and become the Priority / Deadline / Description columns + the To-Do/Backlog status heuristic in `daily-call-tasks-commit`. The status heuristic (commit-side): a near-term deadline (this week) or urgent/high priority → `To-Do`; a far/blank deadline or low priority → `Backlog`. On conflict (e.g. near deadline but low priority, or urgent but far deadline), **any positive To-Do signal wins → `To-Do`**. The user can override every field at review.
+
 ## Provider fallback (Step 0)
 Per source, try the present provider first, fall back to the other; only fail a source if every provider fails.
 - Calendar: `mcp__*Google_Calendar*__list_events`  ⇄  `npx @googleworkspace/cli calendar events list`

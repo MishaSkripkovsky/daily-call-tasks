@@ -43,7 +43,7 @@ Inline call items (from the imported `../daily-call-tasks/references/extraction.
 This mirrors `daily-call-tasks-commit`'s dedup exactly (`../daily-call-tasks-commit/references/commit-rules.md`) so the two skills agree on what's "already ticketed".
 
 ## Step 5/8 — TeamMD resolver
-File: configured `teammd_path`, default `~/Work/team.md` (capital W). Two GFM pipe-table sections — `## Full Members` and `## External / Multi-Channel Guests` — **union both**. Columns, in order:
+File: resolve from the FIRST that exists — config `teammd_path` → `~/Work/team.md` (capital W) → a synced `team.md` under `~/.claude/**` or a `Speed and Function` folder (Andy's TeamMD skill's synced copy — prefer it when present, it stays current across subprojects). Two GFM pipe-table sections — `## Full Members` and `## External / Multi-Channel Guests` — **union both**. Columns, in order:
 ```
 Full Name | Slack Username | Display Name | Slack ID | Work Email | ClickUp ID
 ```
@@ -58,7 +58,7 @@ Resolvers:
 ## Step 8 — Geekbot post
 API base `https://api.geekbot.com/v1` (trailing slashes matter). Auth header **`Authorization: <RAW_API_KEY>`** (NO `Bearer`/`Token` prefix — a prefix 401s) + `Content-Type: application/json`. Key is MEMBER-scoped (per-user) and requires a paid plan; read it from env `GEEKBOT_API_KEY` or `~/.claude/morning-brief/config.json` (`geekbot.api_key`) — NEVER hardcode.
 1. **Discover:** `GET /v1/standups/` → array; pick the configured `geekbot.standup_id` (or, if one standup, use it). Each standup has integer `id` and `questions[]` with integer `id` + `text`.
-2. **Map** our sections to that standup's questions by matching question text (best-effort): "what did you do / yesterday" → Done; "what will you do / today / plan" → On-your-plate; "blockers / blocked" → Blockers; a catch-all / "anything else" → Open questions. If the standup's questions don't match, show the mapping and let the user confirm/edit before posting.
+2. **Map** our sections to that standup's questions by matching question text (best-effort): "what did you do / yesterday" → Done; "what will you do / today / plan" → On-your-plate; "blockers / blocked" → Blockers; a **"mood / how are you / how do you feel"** question → the user's **Mood** (Step 5); a catch-all / "anything else" → Open questions. If the standup's questions don't match, show the mapping and let the user confirm/edit before posting.
 3. **Render the exact payload and PREVIEW it** (Hard Rule 4):
    ```json
    { "standup_id": <int>,

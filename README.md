@@ -15,12 +15,14 @@ This repo ships **three** complementary skills under `.claude/skills/` (they sha
 | `daily-call-tasks-commit` | interactive, write | review/edit the digest → create the chosen items as ClickUp tasks (self only) |
 | `morning-brief` | interactive | Geekbot-style standup prep — what you did / on your plate / blockers / open questions → auto-post to Geekbot (see [Morning Brief](#morning-brief-standup-prep)) |
 
+> New here? See **[QUICKSTART.md](QUICKSTART.md)** for install + a ready-to-paste channel message.
+
 ## How it's delivered (decided)
 The skill **prints** the digest, and that printed digest **is the delivery**: it runs as a daily **cloud routine** (`/schedule`) whose result is a session in your Claude account — you read it each morning in the Claude app (web + mobile). No Slack, no secrets, no extra connector. You then create whatever tickets you want yourself.
 
 ## Send to ClickUp (v2 — interactive)
 A separate, interactive companion skill **`daily-call-tasks-commit`** turns the digest into ClickUp tasks. The morning digest stays **read-only**; this write step runs only in a Claude session (it refuses to run unattended). Flow:
-1. Review the grouped list in chat; edit by exception — `drop B1`, `edit A1: …`, `desc A1: …`, `list A1: <list>`, `go`, `cancel`.
+1. Review the **table** (flat-numbered `1..N`, columns: Task · Priority · Deadline · Description · Status · List); edit by exception — `drop 3`, `edit 4: …`, `desc 4: …`, `prio 4: high`, `due 4: 2026-06-30`, `status 4: backlog`, `list 4: <list>`, `go`, `cancel`.
 2. Pick the destination ClickUp list **in the moment** (per item or a batch default).
 3. On `go`, each item is CREATEd — or, if a similar task already exists in that list, you're shown a before→after diff and choose `update` / `create new` / `skip`.
 
