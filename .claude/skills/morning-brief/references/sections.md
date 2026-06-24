@@ -55,6 +55,13 @@ Resolvers:
 - `name_to_slack_id(name) → [candidates]` — returns a LIST; **>1 hit ⇒ ambiguous, do NOT auto-pick** (ask or keep plain name).
 **Mention format:** emit `<@SlackID>` (angle bracket + `@` + the raw `U…` Slack id, e.g. `<@U01ABCDEF>`) — never the username or display name. Known ambiguities to respect: duplicate display names exist (e.g. two "Lana Mamukova", two "Misha") — first-name-only resolution is forbidden. **Fail closed (Hard Rule 4):** an unresolved/ambiguous name in text destined for a Geekbot post → keep the plain name, WARN, and never emit a broken `@`.
 
+## Step 6 — Emails (Gmail connector)
+Detected by a `mcp__*Gmail*__*` tool in Step 0. **Read-only**, bounded:
+- `mcp__claude_ai_Gmail__search_threads(query="is:unread is:important in:inbox", pageSize=15, view="THREAD_VIEW_MINIMAL")` — minimal view returns each thread's subject + sender + snippet (enough to build the task; no `get_thread` call needed unless you want the body — then `mcp__claude_ai_Gmail__get_thread(threadId, messageFormat="FULL_CONTENT")`). `is:important` ≈ Gmail's Priority-Inbox proxy; widen with `OR from:@<trusted_domain>` only if the user asks.
+- Each unread thread → one plate item **"reply to `<sender>` — `<subject>`"** — a TASK suggestion. The skill has `create_draft` access but NEVER uses it: read-only intent, no drafting/sending.
+- Cap at `pageSize` (≤15) so the inbox can't flood the brief; if more match, append "+N more unread important" rather than listing all.
+- No Gmail tool → skip with a hint (Step 0 already marked the section degraded).
+
 ## Step 8 — Geekbot post
 API base `https://api.geekbot.com/v1` (trailing slashes matter). Auth header **`Authorization: <RAW_API_KEY>`** (NO `Bearer`/`Token` prefix — a prefix 401s) + `Content-Type: application/json`. Key is MEMBER-scoped (per-user) and requires a paid plan; read it from env `GEEKBOT_API_KEY` or `~/.claude/morning-brief/config.json` (`geekbot.api_key`) — NEVER hardcode.
 1. **Discover:** `GET /v1/standups/` → array; pick the configured `geekbot.standup_id` (or, if one standup, use it). Each standup has integer `id` and `questions[]` with integer `id` + `text`.

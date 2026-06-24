@@ -44,7 +44,7 @@ Run in order; this is what makes the skill zero-touch.
    - **Gmail connector** (optional, §6) — if no `*mail*`/`*gmail*` tool is present, mark the Emails section **degraded** ("enable the Gmail connector to turn this on") and continue.
    - **Geekbot key** (optional, §8) — read `GEEKBOT_API_KEY` from env or `~/.claude/morning-brief/config.json`; if absent → post step degrades to preview-only with a hint.
    - **TeamMD** (optional, §5/§8 mentions) — resolve the roster file from the FIRST that exists: config `teammd_path` → `~/Work/team.md` → a synced `team.md` under `~/.claude/**` or a `Speed and Function` folder (the location Andy's TeamMD skill keeps it — that skill syncs one `team.md` across subprojects; if installed, prefer its synced copy so mentions stay current). If none → mentions degrade to plain names with a hint.
-3. **Config + TZ.** Load `~/.claude/morning-brief/config.json` (TZ, `teammd_path`, `geekbot.standup_id`, sections on/off). Resolve the IANA timezone in this order: `--tz=` → `~/.claude/gevent/config.json` `defaults.timezone` → the calendar's own TZ → `UTC` (and say so). NEVER use the bare server clock. State the TZ in the output.
+3. **Config + TZ.** Load `~/.claude/morning-brief/config.json` (`tz`, `teammd_path`, `geekbot.api_key`, `geekbot.standup_id`). Resolve the IANA timezone in this order: `--tz=` flag → this config's `tz` → `~/.claude/gevent/config.json` `defaults.timezone` → the calendar's own TZ → `UTC` (and say so). NEVER use the bare server clock. State the TZ in the output.
 
 On `--status`: print the dependency checklist (identity ✓/✗, ClickUp/Calendar/Drive ✓/✗, Gmail/Geekbot/TeamMD ✓/degraded) and STOP.
 
@@ -82,7 +82,7 @@ Ask the user via `AskUserQuestion`: "Any open questions, and to whom?" For each 
 
 ## Step 6 — "Emails" (optional — only if a Gmail connector is present)
 
-If a Gmail tool was detected (Step 0): list unread, important/starred mail from trusted domains (the connector surface — Gmail's internal "Priority Inbox" ranking may not be exposed; use starred/important + `trusted_domains`). Each → a suggested **"reply to `<sender>`"** plate item. If no Gmail connector → skip the section with a one-line hint; do NOT fail the run.
+If a Gmail tool was detected (Step 0): read the unread **important** inbox via `mcp__claude_ai_Gmail__search_threads` with query `is:unread is:important in:inbox`, `pageSize` ≤15, minimal view (it returns each thread's subject + sender + snippet — no `get_thread` needed unless you want the body). `is:important` is the closest exposed proxy for Gmail's Priority Inbox. Each thread → a plate item **"reply to `<sender>` — `<subject>`"** (a TASK suggestion only — this skill NEVER drafts or sends mail). Cap at the pageSize so a full inbox can't flood the brief; details in `references/sections.md` §Emails. If no Gmail connector → skip the section with a one-line hint; do NOT fail the run.
 
 ## Step 7 — Compose & confirm
 
